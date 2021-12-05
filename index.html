@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<canvas id="canvas" width="400" height="600">
+
+</canvas>
+<div class="press-space">Press Space for fly</div>
+<div class="press-s">Press S for pause</div>
+<div class="press-s">Press Enter for restart</div>
+
+<script>
+    const canvas = document.getElementById('canvas')
+    const ctx = canvas.getContext('2d')
+
+    const world = {
+        width: canvas.offsetWidth,
+        height: canvas.offsetHeight,
+        speed: 1,
+        draw() {
+            ctx.fillStyle = 'lightblue'
+            ctx.fillRect(0, 0, world.width, world.height)
+        },
+    }
+
+    function Tube(x) {
+        this.x = x
+        this.y = 0
+        this.width = 60
+        this.height = Math.random() * world.height / 2  + 50
+        this.betweenDistance = 150
+        this.draw = () => {
+            ctx.fillStyle = 'green'
+            ctx.fillRect(this.x, this.y, this.width, this.height)
+            ctx.fillRect(this.x, this.height + this.betweenDistance, this.width, world.height)
+        }
+    }
+
+    const bird = {
+        x: 100,
+        y: world.height / 4,
+        width: 80,
+        height: 80,
+        gravity:  1,
+        img: new Image(),
+        src: 'src/bird-flappy.png',
+        draw() {
+            ctx.drawImage(this.img,
+                          this.x - this.width / 2, this.y - this.height / 2,
+                          this.width, this.height)
+        },
+        fly() {
+            this.y = this.y - 20
+            bird.gravity = -6
+        },
+        reset() {
+          bird.y = world.height / 4
+          bird.gravity = 1
+        }
+    }
+    bird.img.src = 'src/bird-flappy.png'
+
+    let tubes = [new Tube(world.width), new Tube(world.width + 230)]
+    function resetTubes() {
+        tubes = [new Tube(world.width), new Tube(world.width + 230)]
+        /*tubes.forEach(tube => {
+            tube.x = tube.x + world.width
+        })*/
+    }
+
+
+    let isWorldMoving = true
+    const worldMovingStopToggle = () => {
+        isWorldMoving = !isWorldMoving
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.code == 'KeyS') {
+            worldMovingStopToggle()
+        }
+        if (event.code == 'Space') {
+            if (isWorldMoving) bird.fly()
+        }
+        if (event.code == 'Enter') {
+            gameReset()
+        }
+    })
+
+    const gameReset = () => {
+        bird.reset()
+        resetTubes()
+    }
+
+
+
+    function render() {
+        world.draw()
+        bird.draw()
+        tubes.forEach(tube => {
+            tube.draw()
+            if (isWorldMoving) {
+                tube.x = tube.x - world.speed
+                const isTubeOutOfScreen = tube.x + tube.width < 0
+                if (isTubeOutOfScreen) {
+                    tube.x = world.width
+                    tube.height = Math.random() * world.height / 2 + 50
+                }
+            }
+            const isTubeReachBirdX = (bird.x + bird.width / 4 > tube.x)
+                                     && (bird.x - bird.width / 4 < tube.x + tube.width)
+            const isTubeReachBirdY = (bird.y - bird.height / 4 < tube.height)
+                                     || (bird.y + bird.height / 4 > tube.height + tube.betweenDistance)
+
+            if (isTubeReachBirdX && isTubeReachBirdY) {
+                isWorldMoving = false
+                setTimeout(() => {
+                    gameReset()
+                    worldMovingStopToggle()
+
+                }, 1000)
+            }
+        })
+
+        if (isWorldMoving) {
+            bird.y = bird.y + bird.gravity
+            bird.gravity = bird.gravity + 0.3
+        }
+        const isBirdOutOfScreen = (bird.y + bird.height / 4 > world.height)
+                                  || (bird.y - bird.height / 4 < 0)
+        if (isBirdOutOfScreen) {
+            isWorldMoving = false
+            setTimeout(() => {
+                worldMovingStopToggle()
+                gameReset()
+            }, 1000)
+        }
+
+    }
+
+    function renderInterval() {
+       const renderIntervalId = setInterval(render, 1000 / 60)
+    }
+
+    renderInterval()
+
+</script>
+</body>
+</html>
