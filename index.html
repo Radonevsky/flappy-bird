@@ -23,9 +23,23 @@
         width: canvas.offsetWidth,
         height: canvas.offsetHeight,
         speed: 1,
+        maxSpeed: 10,
+        score: 0,
+        maxScore: 0,
         draw() {
             ctx.fillStyle = 'lightblue'
             ctx.fillRect(0, 0, world.width, world.height)
+        },
+        scoreDraw() {
+            ctx.fillStyle = 'white'
+            ctx.font = '24px sans-serif'
+            ctx.fillText(`Score: ${this.score}`, 20, 30)
+            ctx.fillText(`Max score: ${this.maxScore}`, this.width / 2, 30)
+        },
+        pressSpaceDraw() {
+            ctx.fillStyle = 'white'
+            ctx.font = '48px sans-serif'
+            ctx.fillText('Press space', world.width / 6, world.height / 2)
         },
     }
 
@@ -56,7 +70,7 @@
                           this.width, this.height)
         },
         fly() {
-            this.y = this.y - 20
+            this.y = this.y - 10
             bird.gravity = -6
         },
         reset() {
@@ -75,8 +89,10 @@
     }
 
 
-    let isWorldMoving = true
+    let isWorldMoving = false
+    let spaceDown = false
     const worldMovingStopToggle = () => {
+        spaceDown = true
         isWorldMoving = !isWorldMoving
     }
 
@@ -86,6 +102,10 @@
         }
         if (event.code == 'Space') {
             if (isWorldMoving) bird.fly()
+            if (spaceDown === false) {
+                worldMovingStopToggle()
+                bird.fly()
+            }
         }
         if (event.code == 'Enter') {
             gameReset()
@@ -93,6 +113,12 @@
     })
 
     const gameReset = () => {
+        world.maxScore = Math.max(world.score, world.maxScore)
+        console.log('score: ' + world.score + ' max: ' + world.maxScore)
+        world.score = 0
+        isWorldMoving = false
+        spaceDown = false
+        world.speed = 1
         bird.reset()
         resetTubes()
     }
@@ -110,6 +136,9 @@
                 if (isTubeOutOfScreen) {
                     tube.x = world.width
                     tube.height = Math.random() * world.height / 2 + 50
+                    world.speed = world.speed + 0.1
+                    world.score = world.score + 1
+                    world.maxScore = Math.max(world.score, world.maxScore)
                 }
             }
             const isTubeReachBirdX = (bird.x + bird.width / 4 > tube.x)
@@ -117,12 +146,10 @@
             const isTubeReachBirdY = (bird.y - bird.height / 4 < tube.height)
                                      || (bird.y + bird.height / 4 > tube.height + tube.betweenDistance)
 
-            if (isTubeReachBirdX && isTubeReachBirdY) {
+            if (isTubeReachBirdX && isTubeReachBirdY && isWorldMoving) {
                 isWorldMoving = false
                 setTimeout(() => {
                     gameReset()
-                    worldMovingStopToggle()
-
                 }, 1000)
             }
         })
@@ -133,14 +160,14 @@
         }
         const isBirdOutOfScreen = (bird.y + bird.height / 4 > world.height)
                                   || (bird.y - bird.height / 4 < 0)
-        if (isBirdOutOfScreen) {
+        if (isBirdOutOfScreen && isWorldMoving) {
             isWorldMoving = false
             setTimeout(() => {
-                worldMovingStopToggle()
                 gameReset()
             }, 1000)
         }
-
+        world.scoreDraw()
+        if (spaceDown === false) world.pressSpaceDraw()
     }
 
     function renderInterval() {
