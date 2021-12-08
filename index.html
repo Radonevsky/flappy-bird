@@ -18,6 +18,18 @@
 <script>
     const canvas = document.getElementById('canvas')
     const ctx = canvas.getContext('2d')
+    const audio_point = new Audio();
+    audio_point.src = './src/audio/bird-point.wav';
+    audio_point.volume = 0.05;
+    const audio_fly = new Audio();
+    audio_fly.src = './src/audio/bird-flap.wav';
+    audio_fly.volume = 0.05;
+    const audio_die = new Audio();
+    audio_die.src = './src/audio/bird-die.wav';
+    audio_die.volume = 0.05;
+    const audio_hit = new Audio();
+    audio_hit.src = './src/audio/bird-hit.wav';
+    audio_hit.volume = 0.05;
 
     const world = {
         width: canvas.offsetWidth,
@@ -26,22 +38,33 @@
         maxSpeed: 10,
         score: 0,
         maxScore: 0,
+        sky: new Image(),
         draw() {
             ctx.fillStyle = 'lightblue'
             ctx.fillRect(0, 0, world.width, world.height)
+            ctx.drawImage(this.sky, 20, 40, 200, 100);
+            ctx.drawImage(this.sky, 250, 60, 150, 70);
+
+
         },
         scoreDraw() {
-            ctx.fillStyle = 'white'
+            ctx.fillStyle = 'black '
             ctx.font = '24px sans-serif'
             ctx.fillText(`Score: ${this.score}`, 20, 30)
             ctx.fillText(`Max score: ${this.maxScore}`, this.width / 2, 30)
         },
         pressSpaceDraw() {
             ctx.fillStyle = 'white'
-            ctx.font = '48px sans-serif'
-            ctx.fillText('Press space', world.width / 6, world.height / 2)
+            ctx.font = '42px sans-serif'
+            ctx.fillText('Space / Click', world.width / 5, world.height / 2)
         },
+        increaseScore() {
+            this.score++
+            this.maxScore = Math.max(this.score, this.maxScore)
+            audio_point.play()
+        }
     }
+    world.sky.src = './src/sky.png'
 
     function Tube(x) {
         this.x = x
@@ -49,21 +72,21 @@
         this.width = 60
         this.height = Math.random() * world.height / 2  + 50
         this.betweenDistance = 150
+        this.img = new Image()
+        this.img.src = 'src/tube.png'
         this.draw = () => {
-            ctx.fillStyle = 'green'
-            ctx.fillRect(this.x, this.y, this.width, this.height)
-            ctx.fillRect(this.x, this.height + this.betweenDistance, this.width, world.height)
+            ctx.drawImage(this.img, this.x, this.y - this.height / 8, this.width, this.height + this.height / 8)
+            ctx.drawImage(this.img, this.x, this.height + this.betweenDistance, this.width, world.height)
         }
     }
 
     const bird = {
         x: 100,
-        y: world.height / 4,
+        y: world.height / 3.5,
         width: 80,
         height: 80,
         gravity:  1,
         img: new Image(),
-        src: 'src/bird-flappy.png',
         draw() {
             ctx.drawImage(this.img,
                           this.x - this.width / 2, this.y - this.height / 2,
@@ -72,6 +95,7 @@
         fly() {
             this.y = this.y - 10
             bird.gravity = -6
+            audio_fly.play()
         },
         reset() {
           bird.y = world.height / 4
@@ -111,6 +135,13 @@
             gameReset()
         }
     })
+    document.addEventListener('mousedown', function() {
+            if (isWorldMoving) bird.fly()
+            if (spaceDown === false) {
+                worldMovingStopToggle()
+                bird.fly()
+            }
+    })
 
     const gameReset = () => {
         world.maxScore = Math.max(world.score, world.maxScore)
@@ -129,16 +160,19 @@
         world.draw()
         bird.draw()
         tubes.forEach(tube => {
-            tube.draw()
+            tube.draw ()
             if (isWorldMoving) {
+                const isBirdFlewByTube = (bird.x >= (tube.x + tube.width)
+                                          && bird.x < (tube.x + tube.width + 1))
+                if (isBirdFlewByTube) {
+                    world.increaseScore()
+                }
                 tube.x = tube.x - world.speed
                 const isTubeOutOfScreen = tube.x + tube.width < 0
                 if (isTubeOutOfScreen) {
                     tube.x = world.width
                     tube.height = Math.random() * world.height / 2 + 50
                     world.speed = world.speed + 0.1
-                    world.score = world.score + 1
-                    world.maxScore = Math.max(world.score, world.maxScore)
                 }
             }
             const isTubeReachBirdX = (bird.x + bird.width / 4 > tube.x)
@@ -148,6 +182,7 @@
 
             if (isTubeReachBirdX && isTubeReachBirdY && isWorldMoving) {
                 isWorldMoving = false
+                audio_hit.play()
                 setTimeout(() => {
                     gameReset()
                 }, 1000)
@@ -162,6 +197,9 @@
                                   || (bird.y - bird.height / 4 < 0)
         if (isBirdOutOfScreen && isWorldMoving) {
             isWorldMoving = false
+            setTimeout(() => {
+                audio_die.play()
+            }, 500)
             setTimeout(() => {
                 gameReset()
             }, 1000)
